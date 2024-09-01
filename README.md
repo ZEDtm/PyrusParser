@@ -30,3 +30,16 @@
   python pp.py --token "ТОКЕН БОТА" --chat_id "CHAT ID" --url "ЧТО БУДЕМ СЕГОДНЯ ПАРСИТЬ?" --header "ЭТО ЗАГОЛОВОК ДЛЯ СООБЩЕНИЙ В ТГ, НА СЛУЧАЙ, КОГДА ПАРСЕРОВ ЗАПУЩЕНО НЕСКОЛЬКО В ОДНОГО БОТА"
   ```
 7. **Запускаем, следуем инструкции в консоле. Для начала вам нужно авторизоваться в Pyrus, нажать Enter в консоле, ваш куки будет сохранен, в следующий раз он автоматически авторизуется.**
+
+8. **Вы можете настроить заголовки, которые будут парситься здесь:**
+   ```pp.py
+   ink_url = link.get_attribute('href')
+                name = link.find_elements(By.CSS_SELECTOR, 'div.rg__cell')[2].text.strip()
+                service = ' '.join(link.find_elements(By.CSS_SELECTOR, 'div.rg__cell')[8].text.split())
+                description = clean_html(link.find_elements(By.CSS_SELECTOR, 'div.rg__cell')[13].text.strip())
+                author = link.find_elements(By.CSS_SELECTOR, 'div.rg__cell')[15].text.strip()
+                type = link.find_elements(By.CSS_SELECTOR, 'div.rg__cell')[16].text.strip()
+                channel = link.find_elements(By.CSS_SELECTOR, 'div.rg__cell')[19].text.strip()
+
+                message = f'{link_url}\nПриоитет: {type}\nСервис: <b>{service}</b>\nПроблема: <b>{name}</b>\nОписание:\n{description}\nАвтор: {author}\nКанал связи: {channel}\n\n'
+   ```
