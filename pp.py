@@ -20,14 +20,14 @@ class PyrusParser:
         self.url = url
         self.show = False
         self.header = header
-        self.chookie = True
+        self.cookie = True
         self.driver = self.chrome_driver_configurate()
         self.start_parse()
 
     def chrome_driver_configurate(self) -> webdriver.Chrome:
         """инициализация хромдрайвера"""
         chrome_options = Options()
-        if not(self.show) and self.chookie:
+        if not(self.show) and self.cookie:
             chrome_options.add_argument("--headless")#Скрыть браузер
         service = Service()
         service.verbose = False
@@ -56,7 +56,7 @@ class PyrusParser:
             with open('cookie.pkl', 'wb') as filehandler:
                 pickle.dump(cookies, filehandler)
         else:
-            print("Ты меня решил наебать?")
+            print("Ты меня решил на*бать?")
 
     def load_cookies(self, driver) -> bool:
         try:
@@ -70,7 +70,7 @@ class PyrusParser:
             return False
     
     def get_cookies(self) -> None:
-        self.chookie = False
+        self.cookie = False
         driver = self.chrome_driver_configurate()
         driver.get(self.url)
         input()
