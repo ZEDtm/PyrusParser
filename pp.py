@@ -1,8 +1,10 @@
+import os
 import time
 import pickle
 import requests
 import argparse
 import configparser
+import logging
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -11,7 +13,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
+# Настройка логирования
+logging.basicConfig(level=logging.INFO, format='(%(asctime)s)[%(levelname)s]: %(message)s')
 
 class PyrusParser:
     def __init__(self, token: str, chat_id: str, url: str, header: str) -> None:
@@ -25,17 +30,17 @@ class PyrusParser:
         self.start_parse()
 
     def chrome_driver_configurate(self) -> webdriver.Chrome:
-        """инициализация хромдрайвера"""
+        """Конфигурация ChromeDriver"""
         chrome_options = Options()
         if not(self.show) and self.cookie:
-            chrome_options.add_argument("--headless")#Скрыть браузер
+            chrome_options.add_argument("--headless")  # Скрыть браузер
         service = Service()
         service.verbose = False
         driver = webdriver.Chrome(options=chrome_options)
         return driver
 
     def send_to_tg(self, task: str) -> None:
-        """Отправляем в телегарм"""
+        """Отправка сообщения в телеграм"""
         url = f'https://api.telegram.org/bot{self.token}/sendMessage'
         params = {
             'chat_id': self.chat_id,
@@ -46,17 +51,18 @@ class PyrusParser:
         response = requests.post(url, params=params)
 
         if response.status_code == 200:
-            pass
+            logging.info('Сообщение успешно отправлено в Telegram')
         else:
-            print(f'Ошибка при отправке в телеграм: {response.status_code}', response.text)
+            logging.error(f'Ошибка при отправке в Telegram: {response.status_code} - {response.text}')
         
     def save_cookies(self, driver):
         cookies = driver.get_cookies()
         if cookies:
             with open('cookie.pkl', 'wb') as filehandler:
                 pickle.dump(cookies, filehandler)
+            logging.info('Cookies успешно сохранены')
         else:
-            print("Ты меня решил на*бать?")
+            logging.error("Cookies не был сохранен. Ошибка авторизации")
 
     def load_cookies(self, driver) -> bool:
         try:
@@ -65,8 +71,10 @@ class PyrusParser:
                 for cookie in cookies:
                     driver.add_cookie(cookie)
                 driver.refresh()
+                logging.info('Cookies успешно загружены')
                 return True
         except FileNotFoundError:
+            logging.error('Файл с Cookies не найден')
             return False
     
     def get_cookies(self) -> None:
@@ -83,14 +91,18 @@ class PyrusParser:
         driver = self.driver
         driver.get(self.url)
         while not(self.load_cookies(driver)):
-            print('Вы не авторизованы в Pyrus. Произведите авторизацию и нажмите клавишу Enter')
+            logging.info('Вы не авторизованы в Pyrus. Произведите авторизацию и нажмите клавишу [Enter]')
             self.get_cookies()
 
         driver.get(self.url)
 
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, 20)  # Время ожидания ответа
 
-        links = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a.rg__row.selectableLink')))
+        try:
+            links = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a.rg__row.selectableLink')))
+        except TimeoutException:
+            logging.error("Элементы не найдены в течение заданного времени. Выход...")
+            os.exit()
 
         processed_titles = set()
         messages = []
@@ -118,7 +130,13 @@ class PyrusParser:
 
         while True:
             # Этот блок отправляет только новые или измененные заявки
-            links = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a.rg__row.selectableLink')))
+            driver.refresh()
+            try:
+                links = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a.rg__row.selectableLink')))
+            except TimeoutException:
+                logging.error("Элементы не найдены в течение заданного времени. Повторная попытка...")
+                continue
+
             if links:
 
                 for link in reversed(links):
@@ -139,18 +157,13 @@ class PyrusParser:
 
                         self.send_to_tg(message)
                     else:
-                        continue
+                        pass
             time.sleep(2)
-            print('-----------------------------[Обновление страницы]-----------------------------')
-
-            driver.refresh()
-
-
-
+            logging.info('-----------------------------[Обновление страницы]-----------------------------')
 
 
 def clean_html(raw_html):
-    """Чистим текст от говна, если сообщение с почты(нужен только для корректной отправки в тг бота)"""
+    """Сообщения с почты тянут HTML разметку, еще они очень длинные, поэтмоу мы их срезаем и убираем лишний мусор"""
     soup = BeautifulSoup(raw_html, 'html.parser')
     allowed_tags = ['b', 'i', 'u', 's', 'a', 'code', 'pre']
     for tag in soup.find_all(True):
@@ -164,6 +177,7 @@ def clean_html(raw_html):
 
 def load_config():
     config = configparser.ConfigParser(interpolation=None)
+    logging.info("Читаю файл конфигурации..")
     config.read('config.ini')
     return config
 
@@ -175,6 +189,7 @@ def save_config(token, chat_id, url, header):
         'url': url,
         'header': header
     }
+    logging.info("Сохраняю файл конфигурации..")
     with open('config.ini', 'w') as configfile:
         config.write(configfile)
 
@@ -196,11 +211,11 @@ def main() -> None:
 
     save_config(token, chat_id, url, header)
 
-    print(f"Конфигурация:")
-    print(f"token: {token}")
-    print(f"chat_id: {chat_id}")
-    print(f"url: {url}")
-    print(f"header: {header}")
+    logging.info(f"Конфигурация:")
+    logging.info(f"token: {token}")
+    logging.info(f"chat_id: {chat_id}")
+    logging.info(f"url: {url}")
+    logging.info(f"header: {header}")
 
     PyrusParser(token, chat_id, url, header)
 
