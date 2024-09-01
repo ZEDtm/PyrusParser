@@ -12,6 +12,7 @@
   ```shell
   pip install -r requirements.txt
   ```
+## Для jоских проффи 
 4. **(По желанию) Можно создать файл config.ini, прописать конфигурацию сразу туда, пример:**
   ```ini
   [PyrusParser]
