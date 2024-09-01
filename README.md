@@ -33,7 +33,7 @@
 
 8. **Вы можете настроить заголовки, которые будут парситься здесь:**
    ```pp.py
-   ink_url = link.get_attribute('href')
+   link_url = link.get_attribute('href')
                 name = link.find_elements(By.CSS_SELECTOR, 'div.rg__cell')[2].text.strip()
                 service = ' '.join(link.find_elements(By.CSS_SELECTOR, 'div.rg__cell')[8].text.split())
                 description = clean_html(link.find_elements(By.CSS_SELECTOR, 'div.rg__cell')[13].text.strip())
